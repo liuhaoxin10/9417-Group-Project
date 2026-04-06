@@ -1,0 +1,139 @@
+C:\Users\owen2\PycharmProjects\pythonProject\.venv\Scripts\python.exe "C:\Users\owen2\PycharmProjects\pythonProject\9417 assignment.py" 
+
+===== Processing wine =====
+shape: (178, 14)
+None
+Fitting xRFM with 1 trees and 0 iterations per tree
+======================================================================
+Fitting RFM with ntrain: 106, d: 13, and nval: 36
+======================================================================
+Using cheap batch size
+Optimal M batch size: 106
+Time taken for round 0: 0.004985809326171875 seconds
+Using cheap batch size
+Optimal M batch size: 106
+Time taken for round 1: 0.001999378204345703 seconds
+Using cheap batch size
+Optimal M batch size: 106
+Time taken for round 2: 0.0009999275207519531 seconds
+Using cheap batch size
+Optimal M batch size: 106
+Time taken for round 3: 0.0009996891021728516 seconds
+Using cheap batch size
+Optimal M batch size: 106
+Building trees:   0%|          | 0/1 [00:00<?, ?it/s]
+Time taken for round 4: 0.0009999275207519531 seconds
+Using cheap batch size
+Optimal M batch size: 106
+Tree has no split, stopping training
+Using hard routing for tree prediction
+Accuracy: 0.9444444444444444
+
+===== Processing divorce =====
+shape: (170, 55)
+Building trees:   0%|          | 0/1 [00:00<?, ?it/s]
+None
+Fitting xRFM with 1 trees and 0 iterations per tree
+======================================================================
+Fitting RFM with ntrain: 102, d: 54, and nval: 34
+======================================================================
+Using cheap batch size
+Optimal M batch size: 102
+Time taken for round 0: 0.00700068473815918 seconds
+Using cheap batch size
+Optimal M batch size: 102
+Time taken for round 1: 0.0019998550415039062 seconds
+Using cheap batch size
+Optimal M batch size: 102
+Time taken for round 2: 0.0019998550415039062 seconds
+Using cheap batch size
+Optimal M batch size: 102
+Time taken for round 3: 0.0009999275207519531 seconds
+Using cheap batch size
+Optimal M batch size: 102
+Time taken for round 4: 0.0 seconds
+Using cheap batch size
+Optimal M batch size: 102
+Tree has no split, stopping training
+Using hard routing for tree prediction
+Accuracy: 0.9411764705882353
+
+===== Processing german_credit =====
+C:\Users\owen2\PycharmProjects\pythonProject\9417 assignment.py:17: Pandas4Warning: For backward compatibility, 'str' dtypes are included by select_dtypes when 'object' dtype is specified. This behavior is deprecated and will be removed in a future version. Explicitly pass 'str' to `include` to select them, or to `exclude` to remove them and silence this warning.
+See https://pandas.pydata.org/docs/user_guide/migration-3-strings.html#string-migration-select-dtypes for details on how to write code that works with pandas 2 and 3.
+  categorical_features = X.select_dtypes(include=["object", "category", "bool"]).columns.tolist()
+shape: (1000, 21)
+Building trees:   0%|          | 0/1 [00:00<?, ?it/s]None
+Fitting xRFM with 1 trees and 0 iterations per tree
+======================================================================
+Fitting RFM with ntrain: 600, d: 61, and nval: 200
+======================================================================
+Using cheap batch size
+Optimal M batch size: 600
+Time taken for round 0: 0.007002592086791992 seconds
+Using cheap batch size
+Optimal M batch size: 600
+Time taken for round 1: 0.0029997825622558594 seconds
+Using cheap batch size
+Optimal M batch size: 600
+Time taken for round 2: 0.004000186920166016 seconds
+Using cheap batch size
+Optimal M batch size: 600
+Time taken for round 3: 0.0030002593994140625 seconds
+Using cheap batch size
+Optimal M batch size: 600
+Time taken for round 4: 0.0035076141357421875 seconds
+Using cheap batch size
+Optimal M batch size: 600
+Tree has no split, stopping training
+Using hard routing for tree prediction
+Accuracy: 0.785
+
+===== Processing bike_sharing =====
+Building trees:   0%|          | 0/1 [00:00<?, ?it/s]
+shape: (731, 19)
+None
+Fitting xRFM with 1 trees and 0 iterations per tree
+======================================================================
+Fitting RFM with ntrain: 438, d: 16, and nval: 146
+======================================================================
+Building trees:   0%|          | 0/1 [00:00<?, ?it/s]Using cheap batch size
+Optimal M batch size: 438
+Time taken for round 0: 6.490868806838989 seconds
+Using cheap batch size
+Optimal M batch size: 438
+Time taken for round 1: 6.653397083282471 seconds
+Using cheap batch size
+Optimal M batch size: 438
+Time taken for round 2: 6.308395147323608 seconds
+Using cheap batch size
+Optimal M batch size: 438
+Time taken for round 3: 3.589454174041748 seconds
+Using cheap batch size
+Optimal M batch size: 438
+Time taken for round 4: 5.553922653198242 seconds
+Using cheap batch size
+Optimal M batch size: 438
+Tree has no split, stopping training
+Building trees:   0%|          | 0/1 [00:34<?, ?it/s]
+Using hard routing for tree prediction
+MSE: 1552991.857142857
+
+===== Processing appliances_energy =====
+shape: (10000, 32)
+Using memory-safe training strategy for appliances_energy (n >= 10000).
+None
+Fitting xRFM with 1 trees and 0 iterations per tree
+Building trees:   0%|          | 0/1 [00:00<?, ?it/s]======================================================================
+Fitting RFM with ntrain: 6000, d: 31, and nval: 2000
+======================================================================
+Using cheap batch size
+Optimal M batch size: 6000
+xRFM on appliances_energy failed, fallback to HistGradientBoostingRegressor.
+Original error: RuntimeError('[enforce fail at alloc_cpu.cpp:117] data. DefaultCPUAllocator: not enough memory: you tried to allocate 154224000000 bytes.')
+Building trees:   0%|          | 0/1 [00:01<?, ?it/s]
+MSE: 7661.564991240594
+
+All datasets finished.
+
+进程已结束，退出代码为 0
