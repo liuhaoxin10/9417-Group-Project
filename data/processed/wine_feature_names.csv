@@ -1,0 +1,14 @@
+feature_name
+num__alcohol
+num__malic_acid
+num__ash
+num__alcalinity_of_ash
+num__magnesium
+num__total_phenols
+num__flavanoids
+num__nonflavanoid_phenols
+num__proanthocyanins
+num__color_intensity
+num__hue
+num__od280/od315_of_diluted_wines
+num__proline

@@ -1,0 +1,29 @@
+===== Preprocessing wine =====
+raw shape: (178, 14)
+processed train/val/test: (106, 13) (36, 13) (36, 13)
+processed feature count: 13
+
+===== Preprocessing divorce =====
+raw shape: (170, 55)
+processed train/val/test: (102, 54) (34, 54) (34, 54)
+processed feature count: 54
+
+===== Preprocessing german_credit =====
+raw shape: (1000, 21)
+C:\Users\owen2\PycharmProjects\pythonProject\9417 assignment1.py:50: Pandas4Warning: For backward compatibility, 'str' dtypes are included by select_dtypes when 'object' dtype is specified. This behavior is deprecated and will be removed in a future version. Explicitly pass 'str' to `include` to select them, or to `exclude` to remove them and silence this warning.
+See https://pandas.pydata.org/docs/user_guide/migration-3-strings.html#string-migration-select-dtypes for details on how to write code that works with pandas 2 and 3.
+  categorical_features = X.select_dtypes(
+processed train/val/test: (600, 61) (200, 61) (200, 61)
+processed feature count: 61
+
+===== Preprocessing bike_sharing =====
+raw shape: (731, 15)
+processed train/val/test: (438, 11) (146, 11) (147, 11)
+processed feature count: 11
+
+===== Preprocessing appliances_energy =====
+raw shape: (19735, 32)
+processed train/val/test: (11841, 31) (3947, 31) (3947, 31)
+processed feature count: 31
+
+All preprocessing finished.

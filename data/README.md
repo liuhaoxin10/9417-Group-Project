@@ -1,3 +1,8 @@
+更新：
+已按照修改意见2026/4/12对输出进行修改
+存储了以csv为主的详细分类预处理后数据，存储在processed中
+
+
 ## 2. Data Sources
 
 - Wine: Built-in dataset from sklearn  
