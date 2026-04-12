@@ -1,0 +1,10 @@
+dataset,model,accuracy,auc_roc,train_time_sec,inference_time_per_sample_ms,best_params,best_on_dataset
+divorce,LightGBM,0.9411764705882352,0.9965397923875432,0.0970872920006513,0.0227953529675313,"{""colsample_bytree"": 0.8, ""learning_rate"": 0.03, ""min_child_samples"": 5, ""n_estimators"": 200, ""num_leaves"": 15, ""reg_lambda"": 1.0, ""subsample"": 0.8}",True
+divorce,Random Forest,0.9411764705882352,0.9896193771626296,0.1406063750000612,0.4369975587692084,"{""class_weight"": null, ""max_depth"": null, ""max_features"": ""sqrt"", ""min_samples_leaf"": 1, ""n_estimators"": 200}",False
+divorce,XGBoost,0.9411764705882352,0.9965397923875432,0.1295294999981706,0.064430147069609,"{""colsample_bytree"": 0.8, ""learning_rate"": 0.03, ""max_depth"": 3, ""n_estimators"": 200, ""reg_lambda"": 1.0, ""subsample"": 0.8}",False
+german_credit,LightGBM,0.75,0.7691666666666667,3.0357972080018953,0.0126283300050999,"{""colsample_bytree"": 0.8, ""learning_rate"": 0.03, ""min_child_samples"": 5, ""n_estimators"": 500, ""num_leaves"": 31, ""reg_lambda"": 1.0, ""subsample"": 0.8}",False
+german_credit,Random Forest,0.765,0.8066666666666668,0.1945577920014329,0.0753895849993568,"{""class_weight"": ""balanced"", ""max_depth"": null, ""max_features"": ""sqrt"", ""min_samples_leaf"": 1, ""n_estimators"": 200}",True
+german_credit,XGBoost,0.755,0.7976190476190476,0.6854425410019758,0.0116200000047683,"{""colsample_bytree"": 0.8, ""learning_rate"": 0.03, ""max_depth"": 5, ""n_estimators"": 500, ""reg_lambda"": 1.0, ""subsample"": 0.8}",False
+wine,LightGBM,1.0,1.0,0.440213166999456,0.0305335833117068,"{""colsample_bytree"": 0.8, ""learning_rate"": 0.03, ""min_child_samples"": 5, ""n_estimators"": 200, ""num_leaves"": 15, ""reg_lambda"": 1.0, ""subsample"": 0.8}",True
+wine,Random Forest,1.0,1.0,0.1381032499994035,0.4115694444206181,"{""class_weight"": null, ""max_depth"": null, ""max_features"": ""sqrt"", ""min_samples_leaf"": 1, ""n_estimators"": 200}",False
+wine,XGBoost,1.0,1.0,0.4906640419976611,0.0356203611065413,"{""colsample_bytree"": 0.8, ""learning_rate"": 0.03, ""max_depth"": 3, ""n_estimators"": 200, ""reg_lambda"": 1.0, ""subsample"": 0.8}",False
