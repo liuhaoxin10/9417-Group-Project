@@ -55,7 +55,15 @@ interpretability 对比包含四种特征重要性：
 
 论文篇幅只有 4 到 6 页，不一定要放全部 interpretability 图。建议选择 1 到 2 张最有代表性的图，例如 Appliances Energy 和 German Credit。
 
-## 5. Baseline-only 输出
+## 5. Bonus AGOP Split Verification
+
+Bonus 加分项已经单独整理在 `experiments/bonus` 中。正式对应 PDF Bonus 要求的脚本是 `experiments/bonus/agop_split_from_scratch.py`，输出结果表是 `outputs/tables/bonus_agop_split_check.csv`。
+
+这部分验证的是：我们从零实现的 AGOP-based splitting criterion，是否能在小数据集上选出和 xRFM library 一致的 split direction。当前结果中 absolute cosine similarity 为 `0.99999999`，`passed=True`，说明手写实现和 xRFM reference 的分裂方向几乎完全一致。
+
+论文中建议把这部分放在 Appendix 或 Bonus Section，不需要画图，放一个很小的验证表格即可。详细写法、表格模板和可复制英文段落见 `experiments/bonus/README.md`。
+
+## 6. Baseline-only 输出
 
 为了保留 baseline 过程记录，当前也保留了只包含 XGBoost、LightGBM 和 Random Forest 的输出：
 
@@ -70,14 +78,14 @@ interpretability 对比包含四种特征重要性：
 
 这些文件不包含 xRFM。最终论文如果要展示和 xRFM 的对比，优先使用带 `_all` 的 all-model 图和表。
 
-## 6. 最终检查文件
+## 7. 最终检查文件
 
 - `outputs/tables/final_output_manifest.csv`：最终推荐使用的表格和图片清单。
 - `outputs/tables/final_output_checks.csv`：最终输出检查结果。
 
 当前检查结果没有 blocking error，只有一个 note：`wine / xRFM / auc_roc` 是 `NaN`，原因是 xRFM 当前实现没有多分类概率或连续分数输出。
 
-## 7. 复现命令
+## 8. 复现命令
 
 如果所有模型结果已经生成，只需要重新整理最终表格和清单，可以运行：
 
@@ -100,7 +108,13 @@ python experiments/results/subsample_appliances_all_models.py
 
 注意：all-model subsampling 需要 xRFM 和 torch 环境。如果当前环境不能运行 xRFM，可以先使用已经生成好的 `_all` 图和表。
 
-## 8. 最终推荐给论文同学使用的文件
+如果需要重新运行 Bonus AGOP split verification，可以运行：
+
+```bash
+python experiments/bonus/agop_split_from_scratch.py
+```
+
+## 9. 最终推荐给论文同学使用的文件
 
 ```text
 outputs/tables/all_models_results.csv
@@ -108,12 +122,13 @@ outputs/tables/all_models_classification_wide.csv
 outputs/tables/all_models_regression_wide.csv
 outputs/tables/appliances_subsampling_all.csv
 outputs/tables/interpretability_comparison_all.csv
+outputs/tables/bonus_agop_split_check.csv
 outputs/figures/appliances_subsampling_rmse_all.png
 outputs/figures/appliances_subsampling_train_time_all.png
 outputs/figures/*_interpretability_comparison.png
 ```
 
-## 9. Check Summary
+## 10. Check Summary
 
 - Missing manifest files: 0
 - Blocking check errors: 0
