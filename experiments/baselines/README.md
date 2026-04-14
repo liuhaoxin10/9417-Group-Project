@@ -289,22 +289,36 @@ auc_roc
 - 回归任务填写 `rmse`，`accuracy` 和 `auc_roc` 留空；
 - `model` 建议写 `xRFM`。
 
-如果要把 xRFM 加入现有合并脚本，可以运行：
+如果要生成包含 xRFM 的最终 all-model 结果表，请使用独立的 results 脚本：
 
 ```bash
-python experiments/baselines/merge_baseline_results.py \
-  --inputs \
-  outputs/tables/xgboost_results.csv \
-  outputs/tables/lightgbm_results.csv \
-  outputs/tables/random_forest_results.csv \
-  outputs/tables/xrfm_results.csv
+python experiments/results/merge_all_model_results.py
+```
+
+该脚本默认读取：
+
+```text
+outputs/tables/xgboost_results.csv
+outputs/tables/lightgbm_results.csv
+outputs/tables/random_forest_results.csv
+outputs/tables/xrfm_results.csv
+```
+
+并输出：
+
+```text
+outputs/tables/all_models_results.csv
+outputs/tables/all_models_classification_summary.csv
+outputs/tables/all_models_regression_summary.csv
+outputs/tables/all_models_classification_wide.csv
+outputs/tables/all_models_regression_wide.csv
 ```
 
 ## 后续仍需补充的内容
 
 目前 baseline 训练、结果合并、subsampling baseline 部分已经完成。
 
-后续还需要和 xRFM 同学对齐：
+后续如果继续整理最终材料，需要和 xRFM 同学对齐：
 
 - xRFM 在 5 个数据集上的完整结果；
 - xRFM 在 `appliances_energy` 上的 subsampling 结果；
