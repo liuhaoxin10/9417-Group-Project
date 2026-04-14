@@ -158,25 +158,12 @@ def train_and_evaluate(dataset_name: str, processed_dir: Path) -> dict[str, Any]
             else: 
                 result["auc_roc"] = float(roc_auc_score(y_test, y_proba, multi_class="ovr", average="macro"))
         except (AttributeError, ValueError, IndexError) as e:
-            print(f"  [Warning] 标准 AUC-ROC 计算失败 ({e})。启用硬预测 Fallback...")
-            # Fallback：利用预测的类别，生成一个 One-Hot 概率矩阵，伪装成 predict_proba 的输出
-            try:
-                # 确保预测值是合法的整数类标，并裁剪在合理范围内
-                y_pred_int = np.round(y_pred).astype(int)
-                y_pred_int = np.clip(y_pred_int, 0, n_classes - 1)
-                
-                # 生成 one-hot 矩阵 (比如预测了类别1，则对应行为 [0, 1, 0])
-                y_proba_fallback = np.eye(n_classes)[y_pred_int]
-                
-                if n_classes <= 2:
-                    result["auc_roc"] = float(roc_auc_score(y_test, y_proba_fallback[:, 1]))
-                else:
-                    result["auc_roc"] = float(roc_auc_score(y_test, y_proba_fallback, multi_class="ovr", average="macro"))
-            except Exception as e2:
-                print(f"  [Error] Fallback 失败: {e2}。填入基础分 0.5")
-                result["auc_roc"] = 0.5000  # 兜底分，防止 merge 脚本报错
-                
+            # 听取 Review 建议：不支持真实概率就直接记为 NaN，绝不静默造假
+            print(f"  [Warning] xRFM 无法输出标准概率 ({e})，AUC-ROC 记录为 NaN。")
+            result["auc_roc"] = np.nan
+        
         print(f"Test Accuracy: {result['accuracy']:.6f}, Test AUC-ROC: {result['auc_roc']:.6f}")
+
     return result
 
 def main():
