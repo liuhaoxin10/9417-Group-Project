@@ -1,0 +1,18 @@
+group,path,exists,description,report_use,note
+main_results,outputs/tables/all_models_results.csv,True,Long-format result table for all models and all datasets.,Main result table and source for summary/wide tables.,wine / xRFM / auc_roc is intentionally NaN.
+main_results,outputs/tables/all_models_classification_wide.csv,True,Wide table for classification metrics.,Report table for classification datasets.,
+main_results,outputs/tables/all_models_regression_wide.csv,True,Wide table for regression metrics.,Report table for regression datasets.,
+subsampling,outputs/tables/appliances_subsampling_all.csv,True,All-model subsampling results on Appliances Energy.,Subsampling table for large-dataset experiment.,
+subsampling,outputs/figures/appliances_subsampling_rmse_all.png,True,Test RMSE versus training size for all models.,Subsampling performance figure.,
+subsampling,outputs/figures/appliances_subsampling_train_time_all.png,True,Training time versus training size for all models.,Subsampling efficiency figure.,
+interpretability,outputs/tables/interpretability_comparison_all.csv,True,Combined feature-importance comparison table for all datasets.,Source table for interpretability discussion.,
+interpretability,outputs/tables/wine_interpretability_comparison.csv,True,Feature-importance comparison table for wine.,Dataset-level interpretability table.,
+interpretability,outputs/figures/wine_interpretability_comparison.png,True,Feature-importance comparison figure for wine.,Dataset-level interpretability figure.,
+interpretability,outputs/tables/divorce_interpretability_comparison.csv,True,Feature-importance comparison table for divorce.,Dataset-level interpretability table.,
+interpretability,outputs/figures/divorce_interpretability_comparison.png,True,Feature-importance comparison figure for divorce.,Dataset-level interpretability figure.,
+interpretability,outputs/tables/german_credit_interpretability_comparison.csv,True,Feature-importance comparison table for german_credit.,Dataset-level interpretability table.,
+interpretability,outputs/figures/german_credit_interpretability_comparison.png,True,Feature-importance comparison figure for german_credit.,Dataset-level interpretability figure.,
+interpretability,outputs/tables/bike_sharing_interpretability_comparison.csv,True,Feature-importance comparison table for bike_sharing.,Dataset-level interpretability table.,
+interpretability,outputs/figures/bike_sharing_interpretability_comparison.png,True,Feature-importance comparison figure for bike_sharing.,Dataset-level interpretability figure.,
+interpretability,outputs/tables/appliances_energy_interpretability_comparison.csv,True,Feature-importance comparison table for appliances_energy.,Dataset-level interpretability table.,
+interpretability,outputs/figures/appliances_energy_interpretability_comparison.png,True,Feature-importance comparison figure for appliances_energy.,Dataset-level interpretability figure.,
