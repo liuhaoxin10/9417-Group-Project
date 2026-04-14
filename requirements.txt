@@ -5,3 +5,5 @@ matplotlib
 jupyter
 xgboost
 lightgbm
+xrfm
+torch
