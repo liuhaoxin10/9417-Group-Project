@@ -1,7 +1,12 @@
 """
-Bonus: from-scratch AGOP split direction check.
+Legacy helper: from-scratch standard AGOP split direction check.
 
-这个脚本对应 PDF 里的 Bonus 要求：
+这个脚本对应旧版 PDF 里的 Bonus 要求，保留为 standard AGOP 的参考实现。
+新版 PDF 的正式 Bonus 脚本请使用：
+
+    python experiments/bonus/residual_weighted_agop.py
+
+本脚本完成的旧版检查包括：
 1. 不依赖 xRFM 的内部 AGOP / gradient 函数，手写 AGOP-based splitting criterion；
 2. 在一个小数据集上计算 split direction；
 3. 用 xRFM 的公开训练接口跑同样设置，并读取公开 state_dict 里的 split direction；

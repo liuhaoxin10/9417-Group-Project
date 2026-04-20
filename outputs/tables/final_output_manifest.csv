@@ -6,6 +6,8 @@ subsampling,outputs/tables/appliances_subsampling_all.csv,True,All-model subsamp
 subsampling,outputs/figures/appliances_subsampling_rmse_all.png,True,Test RMSE versus training size for all models.,Subsampling performance figure.,
 subsampling,outputs/figures/appliances_subsampling_train_time_all.png,True,Training time versus training size for all models.,Subsampling efficiency figure.,
 interpretability,outputs/tables/interpretability_comparison_all.csv,True,Combined feature-importance comparison table for all datasets.,Source table for interpretability discussion.,
+bonus,outputs/tables/bonus_residual_agop_direction_comparison.csv,True,Direction comparison between standard AGOP and residual-weighted AGOP.,Bonus appendix table for the disagreement example.,
+bonus,outputs/tables/bonus_residual_agop_performance_comparison.csv,True,Performance comparison between standard AGOP split and residual-weighted AGOP split.,Bonus appendix table for the performance comparison.,
 interpretability,outputs/tables/wine_interpretability_comparison.csv,True,Feature-importance comparison table for wine.,Dataset-level interpretability table.,
 interpretability,outputs/figures/wine_interpretability_comparison.png,True,Feature-importance comparison figure for wine.,Dataset-level interpretability figure.,
 interpretability,outputs/tables/divorce_interpretability_comparison.csv,True,Feature-importance comparison table for divorce.,Dataset-level interpretability table.,

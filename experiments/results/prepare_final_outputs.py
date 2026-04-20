@@ -266,6 +266,20 @@ def build_manifest(tables_dir: Path, figures_dir: Path, combined_interpretabilit
         "Combined feature-importance comparison table for all datasets.",
         "Source table for interpretability discussion.",
     )
+    add_manifest_row(
+        rows,
+        "bonus",
+        tables_dir / "bonus_residual_agop_direction_comparison.csv",
+        "Direction comparison between standard AGOP and residual-weighted AGOP.",
+        "Bonus appendix table for the disagreement example.",
+    )
+    add_manifest_row(
+        rows,
+        "bonus",
+        tables_dir / "bonus_residual_agop_performance_comparison.csv",
+        "Performance comparison between standard AGOP split and residual-weighted AGOP split.",
+        "Bonus appendix table for the performance comparison.",
+    )
 
     for dataset_name in DATASETS:
         add_manifest_row(
@@ -351,13 +365,15 @@ def write_guide(docs_dir: Path, manifest: pd.DataFrame, checks: pd.DataFrame) ->
         "",
         "论文篇幅只有 4 到 6 页，不一定要放全部 interpretability 图。建议选择 1 到 2 张最有代表性的图，例如 Appliances Energy 和 German Credit。",
         "",
-        "## 5. Bonus AGOP Split Verification",
+        "## 5. Bonus Residual-weighted AGOP",
         "",
-        "Bonus 加分项已经单独整理在 `experiments/bonus` 中。正式对应 PDF Bonus 要求的脚本是 `experiments/bonus/agop_split_from_scratch.py`，输出结果表是 `outputs/tables/bonus_agop_split_check.csv`。",
+        "新版 PDF 的 Bonus 要求已经改为提出并分析一个 AGOP framework extension。当前采用的是 PDF 示例中的 residual-weighted AGOP。",
         "",
-        "这部分验证的是：我们从零实现的 AGOP-based splitting criterion，是否能在小数据集上选出和 xRFM library 一致的 split direction。当前结果中 absolute cosine similarity 为 `0.99999999`，`passed=True`，说明手写实现和 xRFM reference 的分裂方向几乎完全一致。",
+        "正式 Bonus 脚本是 `experiments/bonus/residual_weighted_agop.py`，输出结果表是 `outputs/tables/bonus_residual_agop_direction_comparison.csv` 和 `outputs/tables/bonus_residual_agop_performance_comparison.csv`。",
         "",
-        "论文中建议把这部分放在 Appendix 或 Bonus Section，不需要画图，放一个很小的验证表格即可。详细写法、表格模板和可复制英文段落见 `experiments/bonus/README.md`。",
+        "当前 synthetic example 中，standard AGOP 选择的主要方向是 `x0_global_linear_signal`，residual-weighted AGOP 选择的主要方向是 `x1_residual_gate`；两者 absolute cosine similarity 为 `0.038346`，说明方向明显不同。使用相同 two-leaf Ridge evaluator 时，standard AGOP split 的 test RMSE 为 `2.258162`，residual-weighted AGOP split 的 test RMSE 为 `1.722678`，RMSE 改善约 `0.535484`。",
+        "",
+        "论文中建议把这部分放在 Appendix 或 Bonus Section。详细写法、表格模板和可复制英文段落见 `experiments/bonus/README.md`；如果需要逐列理解输出 CSV 的含义，请看 `experiments/bonus/bonus_outputs_explained.md`。",
         "",
         "## 6. Baseline-only 输出",
         "",
@@ -404,10 +420,10 @@ def write_guide(docs_dir: Path, manifest: pd.DataFrame, checks: pd.DataFrame) ->
         "",
         "注意：all-model subsampling 需要 xRFM 和 torch 环境。如果当前环境不能运行 xRFM，可以先使用已经生成好的 `_all` 图和表。",
         "",
-        "如果需要重新运行 Bonus AGOP split verification，可以运行：",
+        "如果需要重新运行 Bonus residual-weighted AGOP experiment，可以运行：",
         "",
         "```bash",
-        "python experiments/bonus/agop_split_from_scratch.py",
+        "python experiments/bonus/residual_weighted_agop.py",
         "```",
         "",
         "## 9. 最终推荐给论文同学使用的文件",
@@ -418,7 +434,8 @@ def write_guide(docs_dir: Path, manifest: pd.DataFrame, checks: pd.DataFrame) ->
         "outputs/tables/all_models_regression_wide.csv",
         "outputs/tables/appliances_subsampling_all.csv",
         "outputs/tables/interpretability_comparison_all.csv",
-        "outputs/tables/bonus_agop_split_check.csv",
+        "outputs/tables/bonus_residual_agop_direction_comparison.csv",
+        "outputs/tables/bonus_residual_agop_performance_comparison.csv",
         "outputs/figures/appliances_subsampling_rmse_all.png",
         "outputs/figures/appliances_subsampling_train_time_all.png",
         "outputs/figures/*_interpretability_comparison.png",

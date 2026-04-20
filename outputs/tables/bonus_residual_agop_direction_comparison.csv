@@ -1,0 +1,2 @@
+dataset,n_samples,seed,standard_top_feature,residual_weighted_top_feature,cosine_similarity_abs,disagreement_threshold,disagreement,weight_function,high_residual_sample_share,brief_explanation
+synthetic_residual_interaction,900,0,x0_global_linear_signal,x1_residual_gate,0.03834643624960602,0.95,True,phi(r)=r^2,0.2512820512820513,"Standard AGOP is dominated by the global x0 trend, while residual weighting upweights underfit samples from the gated interaction region and shifts the split direction toward x1."

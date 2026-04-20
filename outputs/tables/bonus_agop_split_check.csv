@@ -1,2 +1,0 @@
-dataset,n_samples,seed,bandwidth,reg,cosine_similarity_abs,cosine_threshold,passed,scratch_top_feature_index,scratch_top_feature,xrfm_top_feature_index,xrfm_top_feature
-bike_sharing,120,42,10.0,0.001,0.9999999880687253,0.999,True,1,num__yr,1,num__yr
