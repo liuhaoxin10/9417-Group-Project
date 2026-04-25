@@ -1,17 +1,17 @@
 """
 LightGBM baseline training script.
 
-用途：
-1. 读取 data/processed 中固定好的 train/validation/test split；
-2. 用 validation set 对 LightGBM 做小规模网格调参；
-3. 用最佳参数在 train + validation 上重新训练；
-4. 只在 test set 上评估一次；
-5. 保存统一格式的结果表，方便后续和 XGBoost、Random Forest、xRFM 合并。
+Purpose:
+1. Load the fixed train/validation/test splits from data/processed.
+2. Tune a small LightGBM parameter grid on the validation set.
+3. Refit the best model on train + validation data.
+4. Evaluate once on the test set.
+5. Save a standardized result table for comparison with other models.
 
-运行方式：
+Run:
     python experiments/baselines/train_lightgbm.py
 
-输出：
+Output:
     outputs/tables/lightgbm_results.csv
 """
 
@@ -33,16 +33,15 @@ try:
     from lightgbm import LGBMClassifier, LGBMRegressor
 except ImportError as exc:
     raise ImportError(
-        "缺少 lightgbm 依赖。请先运行：pip install lightgbm，"
-        "或者运行：pip install -r requirements.txt"
+        "Missing lightgbm dependency. Run `pip install lightgbm` "
+        "or `pip install -r requirements.txt`."
     ) from exc
 
 
 RANDOM_STATE = 42
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# 当前项目使用的 5 个数据集。task_type 优先从 metadata.json 读取，
-# 这里作为兜底配置。
+# Default task types used when a dataset metadata file is unavailable.
 DATASETS = {
     "wine": "classification",
     "divorce": "classification",
@@ -53,31 +52,31 @@ DATASETS = {
 
 
 def parse_args() -> argparse.Namespace:
-    """解析命令行参数，方便只跑部分数据集或指定输出路径。"""
+    """Parse command-line options for dataset and path selection."""
     parser = argparse.ArgumentParser(description="Train LightGBM baselines.")
     parser.add_argument(
         "--processed-dir",
         type=Path,
         default=PROJECT_ROOT / "data/processed",
-        help="预处理后 train/val/test 文件所在目录。",
+        help="Directory containing the processed train/val/test files.",
     )
     parser.add_argument(
         "--output",
         type=Path,
         default=PROJECT_ROOT / "outputs/tables/lightgbm_results.csv",
-        help="结果表输出路径。",
+        help="Output path for the result table.",
     )
     parser.add_argument(
         "--datasets",
         nargs="*",
         default=list(DATASETS.keys()),
-        help="要训练的数据集名称。默认训练全部数据集。",
+        help="Dataset names to train. Defaults to all datasets.",
     )
     return parser.parse_args()
 
 
 def load_metadata(processed_dir: Path, dataset_name: str) -> dict[str, Any]:
-    """读取 metadata，用来判断任务类型和记录数据规模。"""
+    """Load dataset metadata, including task type and split sizes."""
     metadata_path = processed_dir / f"{dataset_name}_metadata.json"
     if not metadata_path.exists():
         return {
@@ -90,15 +89,13 @@ def load_metadata(processed_dir: Path, dataset_name: str) -> dict[str, Any]:
 
 
 def load_split(processed_dir: Path, dataset_name: str) -> dict[str, Any]:
-    """读取一个数据集的固定 train/validation/test split。"""
+    """Load the fixed train/validation/test split for one dataset."""
     metadata = load_metadata(processed_dir, dataset_name)
 
-    # X 文件已经由预处理脚本完成了缺失值填充、标准化和 one-hot 编码。
     X_train = pd.read_csv(processed_dir / f"{dataset_name}_X_train.csv")
     X_val = pd.read_csv(processed_dir / f"{dataset_name}_X_val.csv")
     X_test = pd.read_csv(processed_dir / f"{dataset_name}_X_test.csv")
 
-    # y 文件只有一列 target，这里转成一维数组。
     y_train = pd.read_csv(processed_dir / f"{dataset_name}_y_train.csv")["target"].to_numpy()
     y_val = pd.read_csv(processed_dir / f"{dataset_name}_y_val.csv")["target"].to_numpy()
     y_test = pd.read_csv(processed_dir / f"{dataset_name}_y_test.csv")["target"].to_numpy()
@@ -116,10 +113,10 @@ def load_split(processed_dir: Path, dataset_name: str) -> dict[str, Any]:
 
 def parameter_grid(task_type: str) -> list[dict[str, Any]]:
     """
-    为 LightGBM 准备一个小型调参网格。
+    Build a compact LightGBM tuning grid.
 
-    这个网格故意控制得比较小：目标是得到稳定、可复现的 baseline，
-    而不是进行非常耗时的大规模超参数搜索。
+    The grid is intentionally small so the baseline remains reproducible
+    without spending most of the project budget on hyperparameter search.
     """
     common_grid = {
         "n_estimators": [200, 500],
@@ -131,19 +128,17 @@ def parameter_grid(task_type: str) -> list[dict[str, Any]]:
         "reg_lambda": [1.0],
     }
 
-    # 分类和回归使用同一组核心超参数，方便横向比较。
     keys = list(common_grid.keys())
     return [dict(zip(keys, values)) for values in product(*(common_grid[k] for k in keys))]
 
 
 def make_model(task_type: str, params: dict[str, Any], n_classes: int | None = None):
-    """根据任务类型创建 LightGBM 模型。"""
+    """Create a LightGBM estimator for the given task type."""
     base_params = {
         **params,
         "random_state": RANDOM_STATE,
         "n_jobs": -1,
         "verbosity": -1,
-        # force_col_wise 可以减少 LightGBM 自动测试行/列并行策略的额外开销。
         "force_col_wise": True,
     }
 
@@ -155,7 +150,7 @@ def make_model(task_type: str, params: dict[str, Any], n_classes: int | None = N
         )
 
     if n_classes is None:
-        raise ValueError("分类任务必须提供 n_classes。")
+        raise ValueError("n_classes is required for classification tasks.")
 
     if n_classes <= 2:
         return LGBMClassifier(
@@ -173,18 +168,17 @@ def make_model(task_type: str, params: dict[str, Any], n_classes: int | None = N
 
 
 def rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-    """计算 RMSE，兼容不同 sklearn 版本。"""
+    """Compute RMSE in a way that is compatible across sklearn versions."""
     return float(np.sqrt(mean_squared_error(y_true, y_pred)))
 
 
 def classification_auc(y_true: np.ndarray, y_proba: np.ndarray, n_classes: int) -> float:
-    """计算二分类或多分类 AUC-ROC；无法计算时返回 NaN。"""
+    """Compute binary or multiclass AUC-ROC, returning NaN if undefined."""
     try:
         if n_classes <= 2:
             return float(roc_auc_score(y_true, y_proba[:, 1]))
         return float(roc_auc_score(y_true, y_proba, multi_class="ovr", average="macro"))
     except ValueError:
-        # 如果某个 split 类别不完整，AUC 会无法定义。
         return float("nan")
 
 
@@ -196,10 +190,10 @@ def validation_score(
     n_classes: int | None = None,
 ) -> float:
     """
-    返回用于选择最佳超参数的 validation 分数。
+    Return the validation score used for hyperparameter selection.
 
-    回归：使用负 RMSE，数值越大代表 RMSE 越小；
-    分类：优先使用 AUC-ROC，无法计算时退回 Accuracy。
+    Regression uses negative RMSE. Classification prefers AUC and falls
+    back to accuracy when AUC is undefined.
     """
     if task_type == "regression":
         return -rmse(y_true, y_pred)
@@ -213,7 +207,7 @@ def validation_score(
 
 
 def tune_on_validation(data: dict[str, Any], task_type: str) -> dict[str, Any]:
-    """在 validation set 上搜索最佳 LightGBM 参数。"""
+    """Search for the best LightGBM parameters on the validation set."""
     X_train = data["X_train"]
     X_val = data["X_val"]
     y_train = data["y_train"]
@@ -222,7 +216,6 @@ def tune_on_validation(data: dict[str, Any], task_type: str) -> dict[str, Any]:
     label_encoder = None
     n_classes = None
 
-    # 分类任务统一编码到 0 到 K-1，避免模型对标签格式有额外要求。
     if task_type == "classification":
         label_encoder = LabelEncoder()
         y_train_fit = label_encoder.fit_transform(y_train)
@@ -255,7 +248,7 @@ def tune_on_validation(data: dict[str, Any], task_type: str) -> dict[str, Any]:
             best_params = params
 
     if best_params is None:
-        raise RuntimeError("没有找到可用的 LightGBM 参数。")
+        raise RuntimeError("No valid LightGBM parameter setting was found.")
 
     return {
         "best_params": best_params,
@@ -272,8 +265,7 @@ def train_final_and_evaluate(
     tuning_result: dict[str, Any],
 ) -> dict[str, Any]:
     """
-    用最佳参数在 train + validation 上重新训练，
-    然后只在 test set 上评估一次。
+    Refit the best model on train + validation data and evaluate on test data.
     """
     X_train_val = pd.concat([data["X_train"], data["X_val"]], axis=0)
     y_train_val = np.concatenate([data["y_train"], data["y_val"]])
@@ -334,7 +326,7 @@ def train_final_and_evaluate(
 
 
 def train_one_dataset(processed_dir: Path, dataset_name: str) -> dict[str, Any]:
-    """训练并评估单个数据集。"""
+    """Train and evaluate one dataset."""
     data = load_split(processed_dir, dataset_name)
     task_type = data["metadata"].get("task_type", DATASETS[dataset_name])
 
@@ -360,11 +352,10 @@ def train_one_dataset(processed_dir: Path, dataset_name: str) -> dict[str, Any]:
 
 
 def main() -> None:
-    """脚本入口：逐个数据集训练 LightGBM，并保存汇总结果。"""
+    """Train LightGBM on each requested dataset and save the result table."""
     args = parse_args()
 
-    # 和 XGBoost 脚本一样：相对路径统一解释为相对于项目根目录，
-    # 避免在 PyCharm 或其他工作目录运行时找不到 data/processed。
+    # Resolve relative paths against the project root for consistent execution.
     if not args.processed_dir.is_absolute():
         args.processed_dir = PROJECT_ROOT / args.processed_dir
     if not args.output.is_absolute():
@@ -375,7 +366,7 @@ def main() -> None:
     results = []
     for dataset_name in args.datasets:
         if dataset_name not in DATASETS:
-            raise ValueError(f"未知数据集：{dataset_name}，可选值：{list(DATASETS)}")
+            raise ValueError(f"Unknown dataset: {dataset_name}. Options: {list(DATASETS)}")
         results.append(train_one_dataset(args.processed_dir, dataset_name))
 
     result_df = pd.DataFrame(results)

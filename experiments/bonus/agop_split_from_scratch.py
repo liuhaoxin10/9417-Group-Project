@@ -1,20 +1,21 @@
 """
 Legacy helper: from-scratch standard AGOP split direction check.
 
-这个脚本对应旧版 PDF 里的 Bonus 要求，保留为 standard AGOP 的参考实现。
-新版 PDF 的正式 Bonus 脚本请使用：
+This script corresponds to an older version of the project bonus requirement
+and is kept as a reference implementation for standard AGOP.
+For the updated bonus experiment, use:
 
     python experiments/bonus/residual_weighted_agop.py
 
-本脚本完成的旧版检查包括：
-1. 不依赖 xRFM 的内部 AGOP / gradient 函数，手写 AGOP-based splitting criterion；
-2. 在一个小数据集上计算 split direction；
-3. 用 xRFM 的公开训练接口跑同样设置，并读取公开 state_dict 里的 split direction；
-4. 检查两者方向是否一致。
+This helper:
+1. Implements the AGOP-based split criterion without calling xRFM internals.
+2. Computes a split direction on a small processed dataset.
+3. Trains xRFM through its public interface and reads the split direction from
+   the public state_dict.
+4. Checks whether the two directions match.
 
-注意：
-- from-scratch 部分只使用 numpy / pandas / sklearn 思路，不调用 xrfm.rfm_src；
-- xRFM 只作为 reference，用来核对我们的手写方向是否和 library 一致。
+The from-scratch portion uses only the public math and standard libraries;
+xRFM is used only as a reference check.
 """
 
 from __future__ import annotations
@@ -35,7 +36,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 @dataclass(frozen=True)
 class BonusConfig:
-    """保存本次 Bonus 检查需要用到的核心参数。"""
+    """Store the core settings for this AGOP split-direction check."""
 
     dataset: str
     n_samples: int
@@ -71,7 +72,7 @@ def resolve_path(path: Path) -> Path:
 
 
 def load_small_split(processed_dir: Path, dataset: str, n_samples: int, n_val_samples: int) -> dict[str, Any]:
-    """读取已经预处理好的数据，并截取小样本用于 Bonus 验证。"""
+    """Load processed data and keep a small subset for the bonus check."""
 
     x_train_path = processed_dir / f"{dataset}_X_train.csv"
     y_train_path = processed_dir / f"{dataset}_y_train.csv"
@@ -90,9 +91,9 @@ def load_small_split(processed_dir: Path, dataset: str, n_samples: int, n_val_sa
         feature_names = [f"feature_{idx}" for idx in range(X_train.shape[1])]
 
     if len(X_train) < n_samples:
-        raise ValueError(f"{dataset} 的训练样本不足 {n_samples} 行。")
+        raise ValueError(f"{dataset} has fewer than {n_samples} training rows.")
     if len(X_val) < n_val_samples:
-        raise ValueError(f"{dataset} 的验证样本不足 {n_val_samples} 行。")
+        raise ValueError(f"{dataset} has fewer than {n_val_samples} validation rows.")
 
     return {
         "X_train": X_train,
@@ -105,10 +106,11 @@ def load_small_split(processed_dir: Path, dataset: str, n_samples: int, n_val_sa
 
 def xrfm_subset_indices(n_samples: int, seed: int) -> np.ndarray:
     """
-    复现 xRFM 在 _get_agop_on_subset 中使用的随机子集顺序。
+    Reproduce the random subset order used by xRFM for AGOP-on-subset.
 
-    xRFM 内部会调用 torch.randperm(len(X))，然后取前 95% 作为 AGOP
-    计算模型的训练部分。这里不调用 xRFM 内部函数，只复现这个公开可读的随机抽样规则。
+    xRFM internally calls torch.randperm(len(X)) and then uses the first 95%
+    for the AGOP training subset. This function reproduces that public sampling
+    rule without calling private xRFM functions.
     """
 
     torch.manual_seed(seed)
@@ -118,7 +120,7 @@ def xrfm_subset_indices(n_samples: int, seed: int) -> np.ndarray:
 
 
 def l2_laplace_kernel(X: np.ndarray, Z: np.ndarray, bandwidth: float, exponent: float) -> np.ndarray:
-    """手写 l2 Laplace kernel: exp(-||x-z||_2^p / bandwidth^p)。"""
+    """Compute the l2 Laplace kernel exp(-||x-z||_2^p / bandwidth^p)."""
 
     distances = np.linalg.norm(X[:, None, :] - Z[None, :, :], axis=2)
     return np.exp(-(distances ** exponent) / (bandwidth ** exponent))
@@ -131,7 +133,7 @@ def fit_kernel_ridge_from_scratch(
     exponent: float,
     reg: float,
 ) -> np.ndarray:
-    """手写 kernel ridge regression，得到 dual coefficients alpha。"""
+    """Fit kernel ridge regression and return dual coefficients."""
 
     kernel_matrix = l2_laplace_kernel(X, X, bandwidth, exponent)
     kernel_matrix = kernel_matrix.copy()
@@ -148,12 +150,12 @@ def function_gradients_from_scratch(
     eps: float = 1e-10,
 ) -> np.ndarray:
     """
-    手写核模型对输入样本的梯度。
+    Compute gradients of the fitted kernel model with respect to samples.
 
-    对 f(z) = sum_i alpha_i k(x_i, z)，l2 Laplace kernel 的梯度为：
+    For f(z) = sum_i alpha_i k(x_i, z), the l2 Laplace kernel gradient is:
     grad_z f(z_j) = sum_i alpha_i * c_ij * (z_j - x_i)
 
-    其中 c_ij = -p / bandwidth^p * k(x_i, z_j) * ||x_i-z_j||^(p-2)。
+    where c_ij = -p / bandwidth^p * k(x_i, z_j) * ||x_i-z_j||^(p-2).
     """
 
     diff = samples[None, :, :] - centers[:, None, :]
@@ -179,7 +181,7 @@ def agop_from_scratch(
     bandwidth: float,
     exponent: float,
 ) -> np.ndarray:
-    """手写 AGOP 矩阵，并按 xRFM 的做法除以最大值做尺度归一化。"""
+    """Compute the AGOP matrix and normalize it using the xRFM convention."""
 
     gradients = function_gradients_from_scratch(
         centers=centers,
@@ -194,7 +196,7 @@ def agop_from_scratch(
 
 
 def top_split_direction_from_agop(agop: np.ndarray) -> np.ndarray:
-    """取 AGOP 的第一右奇异向量，和 xRFM 的 top_vector_agop_on_subset 逻辑一致。"""
+    """Use the first right singular vector as the AGOP split direction."""
 
     _, _, vt = np.linalg.svd(agop, full_matrices=False)
     direction = vt[0]
@@ -202,7 +204,7 @@ def top_split_direction_from_agop(agop: np.ndarray) -> np.ndarray:
 
 
 def compute_from_scratch_direction(data: dict[str, Any], config: BonusConfig) -> tuple[np.ndarray, np.ndarray]:
-    """完整执行手写 AGOP split direction 计算。"""
+    """Run the full from-scratch AGOP split-direction calculation."""
 
     subset_indices = xrfm_subset_indices(len(data["X_train"]), config.seed)
     X_subset = data["X_train"][subset_indices].astype(np.float64)
@@ -226,7 +228,7 @@ def compute_from_scratch_direction(data: dict[str, Any], config: BonusConfig) ->
 
 
 def make_reference_model(config: BonusConfig) -> xRFM:
-    """构造只用于 reference check 的 xRFM 模型。"""
+    """Build the xRFM model used only for the reference check."""
 
     default_rfm_params = {
         "model": {
@@ -263,10 +265,10 @@ def make_reference_model(config: BonusConfig) -> xRFM:
 
 def compute_xrfm_reference_direction(data: dict[str, Any], config: BonusConfig) -> np.ndarray:
     """
-    用 xRFM 的公开接口训练，并从 get_state_dict() 中读取 reference split direction。
+    Train xRFM through the public API and read the reference split direction.
 
-    这里的 xRFM 只用于核对答案；AGOP 和 direction 的计算仍然由上面的
-    from-scratch 函数完成。
+    xRFM is used only for checking. The AGOP and direction computation above
+    remains fully from scratch.
     """
 
     model = make_reference_model(config)
@@ -287,7 +289,7 @@ def compute_xrfm_reference_direction(data: dict[str, Any], config: BonusConfig) 
 
 
 def sign_invariant_cosine(a: np.ndarray, b: np.ndarray) -> float:
-    """split direction 的正负号没有意义，所以用绝对 cosine similarity。"""
+    """Use absolute cosine similarity because split direction sign is arbitrary."""
 
     a_norm = a / (np.linalg.norm(a) + 1e-30)
     b_norm = b / (np.linalg.norm(b) + 1e-30)
@@ -300,7 +302,7 @@ def direction_summary(
     feature_names: list[str],
     config: BonusConfig,
 ) -> pd.DataFrame:
-    """整理一行结果，方便写入 CSV 或直接复制进 appendix。"""
+    """Build a one-row summary for CSV output or appendix use."""
 
     cosine = sign_invariant_cosine(scratch_direction, reference_direction)
     scratch_top_idx = int(np.argmax(np.abs(scratch_direction)))

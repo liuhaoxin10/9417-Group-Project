@@ -1,13 +1,13 @@
 """
 xRFM main training script.
 
-依据 xRFM 官方最新 API 编写：
-1. 统一用 from xrfm import xRFM。
-2. 使用 np.float32 格式传入数据。
-3. fit() 时强制传入 validation 数据以支持 early stopping。
-4. 输出的 CSV 完全兼容 experiments/results/merge_all_model_results.py。
+Purpose:
+1. Train xRFM on each processed dataset.
+2. Use np.float32 arrays, matching the xRFM API expectations.
+3. Provide validation data to fit() for early stopping.
+4. Save a result CSV compatible with experiments/results/merge_all_model_results.py.
 
-运行方式：
+Run:
     python experiments/xrfm/train_xrfm.py
 """
 
@@ -55,7 +55,7 @@ def load_split(processed_dir: Path, dataset_name: str) -> dict[str, Any]:
     return {"X_train": X_train, "X_val": X_val, "X_test": X_test, "y_train": y_train, "y_val": y_val, "y_test": y_test}
 
 def parameter_grid() -> list[dict[str, Any]]:
-    """构建官方建议的 rfm_params 字典网格"""
+    """Build the small rfm_params grid used for xRFM tuning."""
     bandwidths = [5.0, 10.0]
     iters_list = [3, 5]
     
@@ -76,7 +76,6 @@ def make_model(task_type: str, rfm_params: dict[str, Any]):
         rfm_params=rfm_params,
         device=device,
         tuning_metric=tuning_metric,
-        # 如果你想限制叶子节点大小，可以取消下面这行的注释
         # min_subset_size=500 
     )
 
@@ -93,7 +92,6 @@ def train_and_evaluate(dataset_name: str, processed_dir: Path) -> dict[str, Any]
     label_encoder, n_classes = None, None
     if task_type == "classification":
         label_encoder = LabelEncoder()
-        # 将分类标签编码为 0, 1, 2... 并转回 float32，因为 xRFM 需要 float 格式
         y_train = label_encoder.fit_transform(y_train).astype(np.float32)
         y_val = label_encoder.transform(y_val).astype(np.float32)
         y_test = label_encoder.transform(y_test).astype(np.float32)
@@ -101,13 +99,11 @@ def train_and_evaluate(dataset_name: str, processed_dir: Path) -> dict[str, Any]
 
     print(f"\n===== Training xRFM on {dataset_name} ({task_type}) =====")
     
-    # --- 1. 网格调参 ---
     best_score = -np.inf if task_type == "classification" else np.inf
     best_params = None
     
     for params in parameter_grid():
         model = make_model(task_type, params)
-        # xRFM API 要求必须传入验证集！
         model.fit(X_train, y_train, X_val, y_val)
         y_pred = model.predict(X_val)
         
@@ -118,9 +114,7 @@ def train_and_evaluate(dataset_name: str, processed_dir: Path) -> dict[str, Any]
             score = accuracy_score(y_val, y_pred)
             if score > best_score: best_score, best_params = score, params
 
-    # --- 2. 最终训练评估 ---
-    # 注意：既然 xRFM 的 fit 需要 validation 集合做 early stopping，
-    # 我们就不应该把 train 和 val 合并，而是保持使用 X_train 和 X_val 再次拟合一次最终模型。
+    # Keep validation separate because xRFM uses it during fit() for early stopping.
     final_model = make_model(task_type, best_params)
     
     train_start = time.perf_counter()
@@ -131,7 +125,6 @@ def train_and_evaluate(dataset_name: str, processed_dir: Path) -> dict[str, Any]
     y_pred = final_model.predict(X_test)
     inference_time_sec = time.perf_counter() - predict_start
 
-    # 生成兼容同学脚本的格式
     result = {
         "dataset": dataset_name, "task_type": task_type, "model": "xRFM",
         "n_train": len(X_train), "n_val": len(X_val), "n_test": len(X_test),
@@ -158,8 +151,7 @@ def train_and_evaluate(dataset_name: str, processed_dir: Path) -> dict[str, Any]
             else: 
                 result["auc_roc"] = float(roc_auc_score(y_test, y_proba, multi_class="ovr", average="macro"))
         except (AttributeError, ValueError, IndexError) as e:
-            # 听取 Review 建议：不支持真实概率就直接记为 NaN，绝不静默造假
-            print(f"  [Warning] xRFM 无法输出标准概率 ({e})，AUC-ROC 记录为 NaN。")
+            print(f"  [Warning] xRFM could not output standard probabilities ({e}); AUC-ROC is recorded as NaN.")
             result["auc_roc"] = np.nan
         
         print(f"Test Accuracy: {result['accuracy']:.6f}, Test AUC-ROC: {result['auc_roc']:.6f}")

@@ -1,16 +1,16 @@
-from __future__ import annotations
 """
 Subsampling experiment on Appliances Energy for all models.
 
-运行方式：
+Run:
     python experiments/results/subsample_appliances_all_models.py
 
-输出：
+Output:
     outputs/tables/appliances_subsampling_all.csv
     outputs/figures/appliances_subsampling_rmse_all.png
     outputs/figures/appliances_subsampling_train_time_all.png
 """
 
+from __future__ import annotations
 
 
 import argparse
@@ -38,7 +38,7 @@ except ImportError:
 try:
     from xrfm import xRFM
 except ImportError as exc:
-    raise ImportError("缺少 xrfm 依赖。请运行: pip install xrfm") from exc
+    raise ImportError("Missing xrfm dependency. Run: pip install xrfm") from exc
 
 RANDOM_STATE = 42
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -112,7 +112,7 @@ def make_model(model_name: str, params: dict[str, Any]):
             'fit': {'reg': 1e-3, 'iters': 3, 'verbose': False, 'early_stop_rfm': True}
         }
         return xRFM(rfm_params=rfm_params, device=device, tuning_metric='mse')
-    raise ValueError(f"未知模型：{model_name}")
+    raise ValueError(f"Unknown model: {model_name}")
 
 def sample_training_subset(X_train: pd.DataFrame, y_train: np.ndarray, train_size: int):
     rng = np.random.default_rng(RANDOM_STATE)

@@ -1,17 +1,17 @@
 """
 Random Forest baseline training script.
 
-用途：
-1. 读取 data/processed 中固定好的 train/validation/test split；
-2. 用 validation set 对 Random Forest 做小规模网格调参；
-3. 用最佳参数在 train + validation 上重新训练；
-4. 只在 test set 上评估一次；
-5. 保存统一格式的结果表，方便后续和 XGBoost、LightGBM、xRFM 合并。
+Purpose:
+1. Load the fixed train/validation/test splits from data/processed.
+2. Tune a small Random Forest parameter grid on the validation set.
+3. Refit the best model on train + validation data.
+4. Evaluate once on the test set.
+5. Save a standardized result table for comparison with other models.
 
-运行方式：
+Run:
     python experiments/baselines/train_random_forest.py
 
-输出：
+Output:
     outputs/tables/random_forest_results.csv
 """
 
@@ -34,8 +34,7 @@ from sklearn.preprocessing import LabelEncoder
 RANDOM_STATE = 42
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# 当前项目使用的 5 个数据集。task_type 会优先从 metadata.json 中读取，
-# 这里作为 metadata 缺失时的兜底配置。
+# Default task types used when a dataset metadata file is unavailable.
 DATASETS = {
     "wine": "classification",
     "divorce": "classification",
@@ -46,31 +45,31 @@ DATASETS = {
 
 
 def parse_args() -> argparse.Namespace:
-    """解析命令行参数，方便只跑部分数据集或指定输出路径。"""
+    """Parse command-line options for dataset and path selection."""
     parser = argparse.ArgumentParser(description="Train Random Forest baselines.")
     parser.add_argument(
         "--processed-dir",
         type=Path,
         default=PROJECT_ROOT / "data/processed",
-        help="预处理后 train/val/test 文件所在目录。",
+        help="Directory containing the processed train/val/test files.",
     )
     parser.add_argument(
         "--output",
         type=Path,
         default=PROJECT_ROOT / "outputs/tables/random_forest_results.csv",
-        help="结果表输出路径。",
+        help="Output path for the result table.",
     )
     parser.add_argument(
         "--datasets",
         nargs="*",
         default=list(DATASETS.keys()),
-        help="要训练的数据集名称。默认训练全部数据集。",
+        help="Dataset names to train. Defaults to all datasets.",
     )
     return parser.parse_args()
 
 
 def load_metadata(processed_dir: Path, dataset_name: str) -> dict[str, Any]:
-    """读取 metadata，用来判断任务类型和记录数据规模。"""
+    """Load dataset metadata, including task type and split sizes."""
     metadata_path = processed_dir / f"{dataset_name}_metadata.json"
     if not metadata_path.exists():
         return {
@@ -83,15 +82,13 @@ def load_metadata(processed_dir: Path, dataset_name: str) -> dict[str, Any]:
 
 
 def load_split(processed_dir: Path, dataset_name: str) -> dict[str, Any]:
-    """读取一个数据集的固定 train/validation/test split。"""
+    """Load the fixed train/validation/test split for one dataset."""
     metadata = load_metadata(processed_dir, dataset_name)
 
-    # X 文件已经由预处理脚本完成缺失值填充、标准化和 one-hot 编码。
     X_train = pd.read_csv(processed_dir / f"{dataset_name}_X_train.csv")
     X_val = pd.read_csv(processed_dir / f"{dataset_name}_X_val.csv")
     X_test = pd.read_csv(processed_dir / f"{dataset_name}_X_test.csv")
 
-    # y 文件只有一列 target，这里转成一维数组。
     y_train = pd.read_csv(processed_dir / f"{dataset_name}_y_train.csv")["target"].to_numpy()
     y_val = pd.read_csv(processed_dir / f"{dataset_name}_y_val.csv")["target"].to_numpy()
     y_test = pd.read_csv(processed_dir / f"{dataset_name}_y_test.csv")["target"].to_numpy()
@@ -109,10 +106,10 @@ def load_split(processed_dir: Path, dataset_name: str) -> dict[str, Any]:
 
 def parameter_grid(task_type: str) -> list[dict[str, Any]]:
     """
-    为 Random Forest 准备一个小型调参网格。
+    Build a compact Random Forest tuning grid.
 
-    Random Forest 的训练会比单个决策树慢，所以这里控制搜索范围：
-    既覆盖树数量、深度和叶节点大小，又避免网格过大影响实验进度。
+    The grid covers tree count, depth, and leaf size while keeping runtime
+    manageable for reproducible baseline experiments.
     """
     common_grid: dict[str, list[Any]] = {
         "n_estimators": [200, 500],
@@ -129,7 +126,7 @@ def parameter_grid(task_type: str) -> list[dict[str, Any]]:
 
 
 def make_model(task_type: str, params: dict[str, Any]):
-    """根据任务类型创建 Random Forest 模型。"""
+    """Create a Random Forest estimator for the given task type."""
     base_params = {
         **params,
         "random_state": RANDOM_STATE,
@@ -143,18 +140,17 @@ def make_model(task_type: str, params: dict[str, Any]):
 
 
 def rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-    """计算 RMSE，兼容不同 sklearn 版本。"""
+    """Compute RMSE in a way that is compatible across sklearn versions."""
     return float(np.sqrt(mean_squared_error(y_true, y_pred)))
 
 
 def classification_auc(y_true: np.ndarray, y_proba: np.ndarray, n_classes: int) -> float:
-    """计算二分类或多分类 AUC-ROC；无法计算时返回 NaN。"""
+    """Compute binary or multiclass AUC-ROC, returning NaN if undefined."""
     try:
         if n_classes <= 2:
             return float(roc_auc_score(y_true, y_proba[:, 1]))
         return float(roc_auc_score(y_true, y_proba, multi_class="ovr", average="macro"))
     except ValueError:
-        # 如果某个 split 类别不完整，AUC 会无法定义。
         return float("nan")
 
 
@@ -166,10 +162,10 @@ def validation_score(
     n_classes: int | None = None,
 ) -> float:
     """
-    返回用于选择最佳超参数的 validation 分数。
+    Return the validation score used for hyperparameter selection.
 
-    回归：使用负 RMSE，数值越大代表 RMSE 越小；
-    分类：优先使用 AUC-ROC，无法计算时退回 Accuracy。
+    Regression uses negative RMSE. Classification prefers AUC and falls
+    back to accuracy when AUC is undefined.
     """
     if task_type == "regression":
         return -rmse(y_true, y_pred)
@@ -183,7 +179,7 @@ def validation_score(
 
 
 def tune_on_validation(data: dict[str, Any], task_type: str) -> dict[str, Any]:
-    """在 validation set 上搜索最佳 Random Forest 参数。"""
+    """Search for the best Random Forest parameters on the validation set."""
     X_train = data["X_train"]
     X_val = data["X_val"]
     y_train = data["y_train"]
@@ -192,7 +188,6 @@ def tune_on_validation(data: dict[str, Any], task_type: str) -> dict[str, Any]:
     label_encoder = None
     n_classes = None
 
-    # 分类任务统一编码到 0 到 K-1，方便概率列和类别顺序保持一致。
     if task_type == "classification":
         label_encoder = LabelEncoder()
         y_train_fit = label_encoder.fit_transform(y_train)
@@ -225,7 +220,7 @@ def tune_on_validation(data: dict[str, Any], task_type: str) -> dict[str, Any]:
             best_params = params
 
     if best_params is None:
-        raise RuntimeError("没有找到可用的 Random Forest 参数。")
+        raise RuntimeError("No valid Random Forest parameter setting was found.")
 
     return {
         "best_params": best_params,
@@ -242,8 +237,7 @@ def train_final_and_evaluate(
     tuning_result: dict[str, Any],
 ) -> dict[str, Any]:
     """
-    用最佳参数在 train + validation 上重新训练，
-    然后只在 test set 上评估一次。
+    Refit the best model on train + validation data and evaluate on test data.
     """
     X_train_val = pd.concat([data["X_train"], data["X_val"]], axis=0)
     y_train_val = np.concatenate([data["y_train"], data["y_val"]])
@@ -300,7 +294,7 @@ def train_final_and_evaluate(
 
 
 def train_one_dataset(processed_dir: Path, dataset_name: str) -> dict[str, Any]:
-    """训练并评估单个数据集。"""
+    """Train and evaluate one dataset."""
     data = load_split(processed_dir, dataset_name)
     task_type = data["metadata"].get("task_type", DATASETS[dataset_name])
 
@@ -326,11 +320,10 @@ def train_one_dataset(processed_dir: Path, dataset_name: str) -> dict[str, Any]:
 
 
 def main() -> None:
-    """脚本入口：逐个数据集训练 Random Forest，并保存汇总结果。"""
+    """Train Random Forest on each requested dataset and save the result table."""
     args = parse_args()
 
-    # 相对路径统一解释为相对于项目根目录，
-    # 避免在 PyCharm 或其他工作目录运行时找不到 data/processed。
+    # Resolve relative paths against the project root for consistent execution.
     if not args.processed_dir.is_absolute():
         args.processed_dir = PROJECT_ROOT / args.processed_dir
     if not args.output.is_absolute():
@@ -341,7 +334,7 @@ def main() -> None:
     results = []
     for dataset_name in args.datasets:
         if dataset_name not in DATASETS:
-            raise ValueError(f"未知数据集：{dataset_name}，可选值：{list(DATASETS)}")
+            raise ValueError(f"Unknown dataset: {dataset_name}. Options: {list(DATASETS)}")
         results.append(train_one_dataset(args.processed_dir, dataset_name))
 
     result_df = pd.DataFrame(results)

@@ -1,13 +1,13 @@
 """
 Merge all model result tables into report-ready CSV files.
 
-用途：
-1. 合并 XGBoost、LightGBM、Random Forest 以及 xRFM 的结果；
-2. 按 PDF 要求拆分分类任务和回归任务；
-3. 生成 datasets 为 rows、(model, metric) pairs 为 columns 的 wide table；
-4. 保留训练时间和单样本推理时间，方便写 Results section。
+Purpose:
+1. Merge XGBoost, LightGBM, Random Forest, and xRFM result tables.
+2. Split classification and regression tasks into separate report tables.
+3. Create wide tables with datasets as rows and model/metric pairs as columns.
+4. Preserve training and per-sample inference time for the results section.
 
-运行方式：
+Run:
     python experiments/results/merge_all_model_results.py
 """
 
@@ -64,13 +64,13 @@ def parse_args() -> argparse.Namespace:
             DEFAULT_TABLE_DIR / "random_forest_results.csv",
             DEFAULT_TABLE_DIR / "xrfm_results.csv",
         ],
-        help="要合并的 result CSV 文件。",
+        help="Result CSV files to merge.",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
         default=DEFAULT_TABLE_DIR,
-        help="合并后结果表的输出目录。",
+        help="Output directory for merged result tables.",
     )
     return parser.parse_args()
 
@@ -84,12 +84,12 @@ def resolve_path(path: Path) -> Path:
 def load_result_file(path: Path) -> pd.DataFrame:
     path = resolve_path(path)
     if not path.exists():
-        raise FileNotFoundError(f"找不到结果文件：{path}")
+        raise FileNotFoundError(f"Result file not found: {path}")
 
     df = pd.read_csv(path)
     missing_columns = [col for col in REQUIRED_COLUMNS if col not in df.columns]
     if missing_columns:
-        raise ValueError(f"{path} 缺少必要列：{missing_columns}")
+        raise ValueError(f"{path} is missing required columns: {missing_columns}")
 
     return df[REQUIRED_COLUMNS].copy()
 
@@ -121,26 +121,26 @@ def validate_pdf_required_metrics(df: pd.DataFrame) -> None:
         prefix = f"{row.dataset} / {row.model}"
         if row.task_type == "classification":
             if pd.isna(row.accuracy):
-                problems.append(f"{prefix}: classification 缺少 accuracy")
+                problems.append(f"{prefix}: classification accuracy is missing")
             if pd.isna(row.auc_roc):
                 if row.model == "xRFM":
-                    print(f"  [Info] {prefix}: classification 缺少 auc_roc (合理预期，因为 xRFM 不输出连续概率)")
+                    print(f"  [Info] {prefix}: AUC-ROC is missing as expected because xRFM does not output continuous probabilities.")
                 else:
-                    problems.append(f"{prefix}: classification 缺少 auc_roc")
+                    problems.append(f"{prefix}: classification AUC-ROC is missing")
         elif row.task_type == "regression":
             if pd.isna(row.rmse):
-                problems.append(f"{prefix}: regression 缺少 rmse")
+                problems.append(f"{prefix}: regression RMSE is missing")
         else:
-            problems.append(f"{prefix}: 未知 task_type={row.task_type}")
+            problems.append(f"{prefix}: unknown task_type={row.task_type}")
 
         if pd.isna(row.train_time_sec):
-            problems.append(f"{prefix}: 缺少 train_time_sec")
+            problems.append(f"{prefix}: train_time_sec is missing")
         if pd.isna(row.inference_time_per_sample_ms):
-            problems.append(f"{prefix}: 缺少 inference_time_per_sample_ms")
+            problems.append(f"{prefix}: inference_time_per_sample_ms is missing")
 
     if problems:
         problem_text = "\n".join(f"- {problem}" for problem in problems)
-        raise ValueError(f"结果表没有满足 PDF 指标要求：\n{problem_text}")
+        raise ValueError(f"Result tables do not satisfy the required metrics:\n{problem_text}")
 
 
 def make_task_summary(df: pd.DataFrame, task_type: str) -> pd.DataFrame:
@@ -164,7 +164,7 @@ def make_task_summary(df: pd.DataFrame, task_type: str) -> pd.DataFrame:
             "best_params",
         ]
     else:
-        raise ValueError(f"未知任务类型：{task_type}")
+        raise ValueError(f"Unknown task type: {task_type}")
 
     summary = df[df["task_type"] == task_type][columns].copy()
     return summary.sort_values(["dataset", "model"]).reset_index(drop=True)
@@ -194,7 +194,7 @@ def mark_best_values(summary: pd.DataFrame, task_type: str) -> pd.DataFrame:
         metric = "rmse"
         best_indices = summary.groupby("dataset")[metric].idxmin()
     else:
-        raise ValueError(f"未知任务类型：{task_type}")
+        raise ValueError(f"Unknown task type: {task_type}")
 
     summary.loc[best_indices, "best_on_dataset"] = True
     return summary

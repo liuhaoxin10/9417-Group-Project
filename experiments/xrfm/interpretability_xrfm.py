@@ -1,7 +1,7 @@
 """
 Interpretability comparison script for xRFM.
 
-运行方式：
+Run:
     python experiments/xrfm/interpretability_xrfm.py --dataset wine
 """
 from __future__ import annotations
@@ -22,7 +22,7 @@ from sklearn.metrics import accuracy_score, mean_squared_error
 try:
     from xrfm import xRFM
 except ImportError as exc:
-    raise ImportError("缺少 xrfm 依赖。请先运行: pip install xrfm") from exc
+    raise ImportError("Missing xrfm dependency. Run: pip install xrfm") from exc
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RANDOM_STATE = 42
@@ -37,7 +37,7 @@ DATASETS = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run interpretability comparison for xRFM.")
-    parser.add_argument("--dataset", type=str, default="wine", help="用于可解释性分析的数据集名称。")
+    parser.add_argument("--dataset", type=str, default="wine", help="Dataset name for interpretability analysis.")
     parser.add_argument("--processed-dir", type=Path, default=PROJECT_ROOT / "data/processed")
     parser.add_argument("--output-dir", type=Path, default=PROJECT_ROOT / "outputs/tables")
     parser.add_argument("--figures-dir", type=Path, default=PROJECT_ROOT / "outputs/figures")
@@ -77,17 +77,15 @@ def custom_scorer(estimator, X, y):
         return accuracy_score(y, np.round(y_pred))
 
 def find_agop_importance(model, n_features):
-    """终极提取器：无限递归展开嵌套列表，并自适应过滤底层的偏置项(Bias)"""
+    """Extract AGOP-style feature importances from nested xRFM internals."""
     import torch
     import numpy as np
     
     def extract_diag(val):
-        # 将 tensor 转为 numpy 数组
         if hasattr(val, 'detach'): 
             val = val.detach().cpu().numpy()
         
         if isinstance(val, np.ndarray):
-            # 应对底层追加 Bias 的情况：只要维度 >= n_features，我们只截取前 n_features 个核心特征！
             if val.ndim == 2 and val.shape[0] == val.shape[1] and val.shape[0] >= n_features:
                 return np.diag(val)[:n_features]
             if val.ndim == 1 and val.shape[0] >= n_features:
@@ -95,7 +93,7 @@ def find_agop_importance(model, n_features):
         return None
 
     def extract_from_nested(obj):
-        """核心武器：不管底层套了多少层 list 或 dict，全部递归挖出来"""
+        """Recursively unpack lists and dictionaries looking for matrices."""
         diags = []
         if isinstance(obj, (list, tuple)):
             for item in obj:
@@ -111,32 +109,28 @@ def find_agop_importance(model, n_features):
 
     diags = []
     
-    # 途径 1：尝试提取 M 矩阵（这是最稳妥的数据源）
     try:
         if hasattr(model, 'collect_Ms'):
             val = model.collect_Ms() if callable(model.collect_Ms) else model.collect_Ms
             diags.extend(extract_from_nested(val))
     except Exception as e:
-        print(f"  [避坑] collect_Ms 报错: {e}")
+        print(f"  [Warning] collect_Ms failed: {e}")
 
-    # 途径 2：尝试提取最佳 AGOP
     if not diags:
         try:
             if hasattr(model, 'collect_best_agops'):
                 val = model.collect_best_agops() if callable(model.collect_best_agops) else model.collect_best_agops
                 diags.extend(extract_from_nested(val))
         except Exception as e:
-            pass # 官方 Bug，直接无视
+            pass
 
-    # 途径 3：暴力遍历所有内部模型属性
     if not diags:
         for attr in ['models', 'trees']:
             if hasattr(model, attr):
                 diags.extend(extract_from_nested(getattr(model, attr)))
                 
-    # 如果找到了任何矩阵，求平均并返回
     if diags:
-        print(f"  [终极解析] 成功穿透底层！共收集到了 {len(diags)} 个局部特征重要性矩阵，已自动裁剪对齐并求平均！")
+        print(f"  [Info] Collected {len(diags)} local feature-importance matrices and averaged them.")
         return np.mean(diags, axis=0)
 
     return None
@@ -166,20 +160,18 @@ def main() -> None:
     model = xRFM(rfm_params=rfm_params, device=device, tuning_metric=tuning_metric)
     model.fit(X_train, y_train, X_val, y_val)
     
-    # ================= 修改核心：自动雷达扫描提取真实 AGOP =================
     print("Computing AGOP Importances...")
     agop_importance = find_agop_importance(model, n_features)
     
     if agop_importance is None:
         print("\n" + "!"*60)
-        print("【调试信息】雷达扫描失败！未能自动找到维度匹配的特征矩阵。")
-        print("为了不造假，请将以下暴露的模型内部属性发给 AI 进行分析：")
-        print("1. model 暴露的公开属性: ", [a for a in dir(model) if not a.startswith('_')])
+        print("[Debug] AGOP extraction failed: no dimension-compatible feature matrix was found.")
+        print("Available public model attributes:")
+        print("1. model attributes: ", [a for a in dir(model) if not a.startswith('_')])
         if hasattr(model, 'model'):
-            print("2. model.model 暴露的属性: ", [a for a in dir(model.model) if not a.startswith('_')])
+            print("2. model.model attributes: ", [a for a in dir(model.model) if not a.startswith('_')])
         print("!"*60 + "\n")
-        raise ValueError("严重错误：无法提取 AGOP 矩阵！请将上方打印的【调试信息】发给 AI 助手，以确定准确的获取方法。")
-    # ===============================================================
+        raise ValueError("Could not extract an AGOP matrix from the fitted xRFM model.")
 
     print("Computing PCA Loadings...")
     pca = PCA(n_components=1)
@@ -232,7 +224,7 @@ def main() -> None:
     fig.tight_layout()
     out_fig = args.figures_dir / f"{args.dataset}_interpretability_comparison.png"
     fig.savefig(out_fig, dpi=300)
-    print("\n完成！真正的对比图已生成！")
+    print("\nDone. The comparison figure has been generated.")
 
 if __name__ == "__main__":
     main()

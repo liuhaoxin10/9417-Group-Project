@@ -28,19 +28,17 @@ except ImportError:
 try:
     from xrfm import xRFM
 except ImportError as exc:
-    raise ImportError("缺少 xrfm 依赖。请运行: pip install xrfm") from exc
+    raise ImportError("Missing xrfm dependency. Run: pip install xrfm") from exc
 
 RANDOM_STATE = 42
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATASET_NAME = "appliances_energy"
 
-# =============== 核心修改 1：加上 xRFM ===============
 MODELS = ["XGBoost", "LightGBM", "Random Forest", "xRFM"]
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run Appliances Energy subsampling experiment.")
     parser.add_argument("--processed-dir", type=Path, default=PROJECT_ROOT / "data/processed")
-    # =============== 核心修改 2：指向最新的合并大表 ===============
     parser.add_argument("--all-results", type=Path, default=PROJECT_ROOT / "outputs/tables/all_models_results_all.csv")
     parser.add_argument("--output-table", type=Path, default=PROJECT_ROOT / "outputs/tables/appliances_subsampling_all.csv")
     parser.add_argument("--figures-dir", type=Path, default=PROJECT_ROOT / "outputs/figures")
@@ -96,7 +94,7 @@ def make_model(model_name: str, params: dict[str, Any]):
             'fit': {'reg': 1e-3, 'iters': 3, 'verbose': False, 'early_stop_rfm': True}
         }
         return xRFM(rfm_params=rfm_params, device=device, tuning_metric='mse')
-    raise ValueError(f"未知模型：{model_name}")
+    raise ValueError(f"Unknown model: {model_name}")
 
 def sample_training_subset(X_train: pd.DataFrame, y_train: np.ndarray, train_size: int):
     rng = np.random.default_rng(RANDOM_STATE)
@@ -166,8 +164,6 @@ def main() -> None:
     result_df.to_csv(args.output_table, index=False)
     print(f"Saved subsampling results to: {args.output_table}")
 
-    # =============== 核心修改 3：同时画两张图 ===============
-    # 1. 画第一张图：RMSE 对比
     fig, ax = plt.subplots(figsize=(7.2, 4.6))
     for m in MODELS:
         m_df = result_df[result_df["model"] == m]
@@ -179,7 +175,6 @@ def main() -> None:
     fig.tight_layout()
     fig.savefig(args.figures_dir / "appliances_subsampling_rmse_all.png", dpi=200)
 
-    # 2. 画第二张图：Training Time 对比
     fig2, ax2 = plt.subplots(figsize=(7.2, 4.6))
     for m in MODELS:
         m_df = result_df[result_df["model"] == m]

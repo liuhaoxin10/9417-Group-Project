@@ -1,3 +1,17 @@
+"""
+Preprocess all datasets used in the COMP9417 project.
+
+Inputs:
+    Raw dataset files under data/raw/ or the legacy data/ directory.
+
+Outputs:
+    Processed train/validation/test splits, feature names, metadata, and
+    fitted preprocessors under data/processed/.
+
+Run:
+    python experiments/dataset/preprocess.py
+"""
+
 import os
 import json
 import joblib
@@ -23,9 +37,10 @@ def ensure_dirs():
 
 def resolve_data_path(filename):
     """
-    优先从 data/raw/ 找；
-    如果本地还没把原始数据搬进去，则回退到 data/ 找。
-    这样既兼容当前本地状态，也和组员要求的长期结构兼容。
+    Resolve raw data files from data/raw/ first, then the legacy data/ folder.
+
+    The fallback keeps older local layouts working while supporting the final
+    project structure expected by the README.
     """
     candidates = [
         os.path.join(RAW_DIR, filename),
@@ -36,10 +51,10 @@ def resolve_data_path(filename):
         if os.path.exists(path):
             return path
     raise FileNotFoundError(
-        f"找不到数据文件 {filename}。\n"
-        f"已尝试这些路径：\n" +
+        f"Data file not found: {filename}.\n"
+        f"Tried these paths:\n" +
         "\n".join(candidates) +
-        "\n请把原始数据放到 data/raw/，或确认 data/ 下是否存在该文件。"
+        "\nPlace the raw data under data/raw/ or confirm it exists under data/."
     )
 
 
@@ -140,8 +155,8 @@ def prepare_data(df, target_col, task_type="classification", drop_cols=None,
         df = df.drop(columns=drop_cols, errors="ignore")
 
     if target_col not in df.columns:
-        print("当前可用列名：", list(df.columns))
-        raise ValueError(f"target列 '{target_col}' 不在数据中，请检查列名。")
+        print("Available columns:", list(df.columns))
+        raise ValueError(f"Target column '{target_col}' was not found in the data.")
 
     X = df.drop(columns=[target_col]).copy()
     y = df[target_col].copy()
@@ -269,7 +284,6 @@ def load_bike_data():
     df = pd.read_csv(path)
     df.columns = df.columns.str.strip()
 
-    # 按组员意见：删掉 dteday，不再生成重复日期特征
     if "dteday" in df.columns:
         df = df.drop(columns=["dteday"])
 
@@ -281,7 +295,6 @@ def load_appliances_data():
     df = pd.read_csv(path)
     df.columns = df.columns.str.strip()
 
-    # 按组员意见：不采样到 10000，直接使用全量，确保 n > 10000
     if "date" in df.columns:
         df["date"] = pd.to_datetime(df["date"])
         df["hour"] = df["date"].dt.hour
@@ -349,9 +362,9 @@ if __name__ == "__main__":
             if possible_targets:
                 cfg["target"] = possible_targets[0]
             else:
-                print("Divorce 数据集列名如下：")
+                print("Divorce dataset columns:")
                 print(list(df.columns))
-                raise ValueError("请手动确认 divorce 的标签列名。")
+                raise ValueError("Please confirm the divorce dataset target column manually.")
 
         data_dict = prepare_data(
             df=df,

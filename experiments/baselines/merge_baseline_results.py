@@ -1,13 +1,13 @@
 """
 Merge baseline result tables into report-ready CSV files.
 
-用途：
-1. 只合并 XGBoost、LightGBM、Random Forest 三个 baseline 的结果；
-2. 按 PDF 要求拆分分类任务和回归任务；
-3. 生成 datasets 为 rows、(model, metric) pairs 为 columns 的 wide table；
-4. 保留训练时间和单样本推理时间，方便写 Results section。
+Purpose:
+1. Merge the baseline model result tables.
+2. Split classification and regression tasks into separate report tables.
+3. Create wide tables with datasets as rows and model/metric pairs as columns.
+4. Preserve training and per-sample inference time for the results section.
 
-运行方式：
+Run:
     python experiments/baselines/merge_baseline_results.py
 """
 
@@ -62,15 +62,15 @@ def parse_args() -> argparse.Namespace:
             DEFAULT_TABLE_DIR / "xgboost_results.csv",
             DEFAULT_TABLE_DIR / "lightgbm_results.csv",
             DEFAULT_TABLE_DIR / "random_forest_results.csv",
-            DEFAULT_TABLE_DIR / "xrfm_results.csv",  # <==== 核心修改：加入了 xRFM 的结果文件！
+            DEFAULT_TABLE_DIR / "xrfm_results.csv",
         ],
-        help="要合并的 result CSV 文件。",
+        help="Result CSV files to merge.",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
         default=DEFAULT_TABLE_DIR,
-        help="合并后结果表的输出目录。",
+        help="Output directory for merged result tables.",
     )
     return parser.parse_args()
 
@@ -84,13 +84,13 @@ def resolve_path(path: Path) -> Path:
 def load_result_file(path: Path) -> pd.DataFrame:
     path = resolve_path(path)
     if not path.exists():
-        print(f"⚠️ 警告：找不到结果文件 {path}，将跳过合并该模型。")
+        print(f"[Warning] Result file not found, skipping: {path}")
         return pd.DataFrame()
 
     df = pd.read_csv(path)
     missing_columns = [col for col in REQUIRED_COLUMNS if col not in df.columns]
     if missing_columns:
-        raise ValueError(f"{path} 缺少必要列：{missing_columns}")
+        raise ValueError(f"{path} is missing required columns: {missing_columns}")
 
     return df[REQUIRED_COLUMNS].copy()
 
@@ -115,16 +115,16 @@ def validate_pdf_required_metrics(df: pd.DataFrame) -> None:
         prefix = f"{row.dataset} / {row.model}"
         if row.task_type == "classification":
             if pd.isna(row.accuracy):
-                problems.append(f"{prefix}: classification 缺少 accuracy")
+                problems.append(f"{prefix}: classification accuracy is missing")
             if pd.isna(row.auc_roc):
-                pass # 已知 xRFM 的多分类 AUC 可能为 NaN，这里允许放行
+                pass  # xRFM multiclass AUC can be NaN because probabilities are unavailable.
         elif row.task_type == "regression":
             if pd.isna(row.rmse):
-                problems.append(f"{prefix}: regression 缺少 rmse")
+                problems.append(f"{prefix}: regression RMSE is missing")
 
     if problems:
         problem_text = "\n".join(f"- {problem}" for problem in problems)
-        print(f"⚠️ 提示：部分指标缺失 (如果是多分类 AUC 缺失可忽略)：\n{problem_text}")
+        print(f"[Warning] Some metrics are missing:\n{problem_text}")
 
 
 def make_task_summary(df: pd.DataFrame, task_type: str) -> pd.DataFrame:
@@ -133,7 +133,7 @@ def make_task_summary(df: pd.DataFrame, task_type: str) -> pd.DataFrame:
     elif task_type == "regression":
         columns = ["dataset", "model", "rmse", "train_time_sec", "inference_time_per_sample_ms", "best_params"]
     else:
-        raise ValueError(f"未知任务类型：{task_type}")
+        raise ValueError(f"Unknown task type: {task_type}")
 
     summary = df[df["task_type"] == task_type][columns].copy()
     return summary.sort_values(["dataset", "model"]).reset_index(drop=True)
@@ -161,7 +161,7 @@ def mark_best_values(summary: pd.DataFrame, task_type: str) -> pd.DataFrame:
     elif task_type == "regression":
         best_indices = summary.groupby("dataset")["rmse"].idxmin()
     else:
-        raise ValueError(f"未知任务类型：{task_type}")
+        raise ValueError(f"Unknown task type: {task_type}")
 
     summary.loc[best_indices, "best_on_dataset"] = True
     return summary
@@ -172,12 +172,11 @@ def main() -> None:
     args.output_dir = resolve_path(args.output_dir)
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    # 过滤掉空的 DataFrame
     dfs = [load_result_file(path) for path in args.inputs]
     dfs = [df for df in dfs if not df.empty]
     
     if not dfs:
-        print("没有找到任何结果文件，请先运行 train 脚本！")
+        print("No result files were found. Run the training scripts first.")
         return
 
     baseline_results = pd.concat(dfs, ignore_index=True)
@@ -191,7 +190,6 @@ def main() -> None:
     classification_summary = mark_best_values(classification_summary, "classification")
     regression_summary = mark_best_values(regression_summary, "regression")
 
-    # ================= 核心修改：统一输出为 all_models =================
     outputs = {
         "all_models_results_all.csv": baseline_results,
         "all_models_classification_summary.csv": classification_summary,
