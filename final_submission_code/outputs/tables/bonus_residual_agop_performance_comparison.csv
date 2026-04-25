@@ -1,0 +1,4 @@
+method,split_top_feature,test_rmse,rmse_improvement_vs_standard_agop,left_train_size,right_train_size
+single_ridge_no_split,,2.4812962836944776,,,
+standard_agop_split,x0_global_linear_signal,2.258162135487594,0.0,293.0,292.0
+residual_weighted_agop_split,x1_residual_gate,1.7226778297716854,0.5354843057159087,293.0,292.0

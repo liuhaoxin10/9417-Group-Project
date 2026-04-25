@@ -1,0 +1,2 @@
+severity,item,message
+note,wine / xRFM,AUC-ROC is NaN because current xRFM implementation does not provide multi-class probability scores.

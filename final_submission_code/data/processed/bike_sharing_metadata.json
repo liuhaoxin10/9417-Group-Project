@@ -1,0 +1,48 @@
+{
+  "dataset_name": "bike_sharing",
+  "task_type": "regression",
+  "target": "cnt",
+  "raw_data_path": "data\\day.csv",
+  "processed_data_dir": "data/processed",
+  "original_features": [
+    "season",
+    "yr",
+    "mnth",
+    "holiday",
+    "weekday",
+    "workingday",
+    "weathersit",
+    "temp",
+    "atemp",
+    "hum",
+    "windspeed"
+  ],
+  "processed_features": [
+    "num__season",
+    "num__yr",
+    "num__mnth",
+    "num__holiday",
+    "num__weekday",
+    "num__workingday",
+    "num__weathersit",
+    "num__temp",
+    "num__atemp",
+    "num__hum",
+    "num__windspeed"
+  ],
+  "train_size": 438,
+  "val_size": 146,
+  "test_size": 147,
+  "random_state": 42,
+  "saved_files": [
+    "bike_sharing_X_train.csv",
+    "bike_sharing_X_val.csv",
+    "bike_sharing_X_test.csv",
+    "bike_sharing_y_train.csv",
+    "bike_sharing_y_val.csv",
+    "bike_sharing_y_test.csv",
+    "bike_sharing_feature_names.csv",
+    "bike_sharing_metadata.json",
+    "bike_sharing_preprocessor.joblib"
+  ]
+}

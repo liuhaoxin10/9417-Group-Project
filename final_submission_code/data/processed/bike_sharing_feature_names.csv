@@ -1,0 +1,12 @@
+feature_name
+num__season
+num__yr
+num__mnth
+num__holiday
+num__weekday
+num__workingday
+num__weathersit
+num__temp
+num__atemp
+num__hum
+num__windspeed
